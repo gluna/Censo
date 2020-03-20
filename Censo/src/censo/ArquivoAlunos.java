@@ -98,6 +98,7 @@ public class ArquivoAlunos {
 					  + "|"
 					  + "|"
 					  + "|"
+					  + "|" //tipo financiamento
 					  + "|"
 					  + "|"
 					  + "|"
@@ -327,7 +328,7 @@ public class ArquivoAlunos {
 	         statement = connection.createStatement();
 	         System.out.println("OK");
 	      } catch (Exception e) {
-	         System.out.println("Não foi possível conectar ao banco: " + e.getMessage());
+	         System.out.println("Nï¿½o foi possï¿½vel conectar ao banco: " + e.getMessage());
 	      }
 	}
 
