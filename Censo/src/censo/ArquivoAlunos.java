@@ -6,11 +6,13 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 
 public class ArquivoAlunos {
 	
 	Connection connection;
 	Statement statement;
+	SimpleDateFormat formato = new SimpleDateFormat("ddMMyyyy");
 
 	public static void main(String[] args) {
 		new ArquivoAlunos();
@@ -32,8 +34,16 @@ public class ArquivoAlunos {
 			String linha = "40|1027|4";
 			buffWrite.append(linha + "\n");
 			
-			ResultSet rs = statement.executeQuery("select * from aluno, pessoa where aluno.cdpessoa = pessoa.cdpessoa");
-			
+			ResultSet rs = statement.executeQuery("select * " + 
+					" from aluno, pessoa, curso, POLO, ALUNVINCULADOPOLO " + 
+					" where aluno.cdpessoa = pessoa.cdpessoa " + 
+					" and aluno.cdcurso = curso.cdcurso " + 
+					" and aluno.cdaluno = ALUNVINCULADOPOLO.CDALUNO " + 
+					" and aluno.CDCURSO = ALUNVINCULADOPOLO.CDCURSO " + 
+					" and ALUNVINCULADOPOLO.CDPOLO = polo.CDPOLO " + 
+					" and aluno.cdcurso in ('0000000024','0000000026','0000000029') " + 
+					" and aluno.anoperiodoingresso <> '202001' " + 
+					" and aluno.staluno = '01' ");
 			rs.next();
 			
 			while(rs.next()) {
@@ -42,8 +52,8 @@ public class ArquivoAlunos {
 					  + "|"
 					  + rs.getString("NMPESSOA")+"|"
 					  + rs.getString("CPF")+"|"
-					  + rs.getString("PASSAPORTE")+"|"
-					  + rs.getString("DTNASCIMENTO")+"|"
+					  + getPassaporte(rs.getString("PASSAPORTE"))+"|"
+					  + formato.format(rs.getDate("DTNASCIMENTO")) +"|"
 					  + getSexo(rs.getString("SEXO"))+"|"
 					  + "0|"
 					  + rs.getString("NMMAE")+"|"
@@ -52,26 +62,26 @@ public class ArquivoAlunos {
 					  + "|"
 					  + "BRA|"
 					  + "2|"
-					  + "0|"
-					  + "0|"
-					  + "0|"
-					  + "0|"
-					  + "0|"
-					  + "0|"
-					  + "0|"
-					  + "0|"
-					  + "0|"
-					  + "0|"
-					  + "0|"
-					  + "0|"
-					  + "0";
+					  + "|"
+					  + "|"
+					  + "|"
+					  + "|"
+					  + "|"
+					  + "|"
+					  + "|"
+					  + "|"
+					  + "|"
+					  + "|"
+					  + "|"
+					  + "|"
+					  + "";
 				
-				buffWrite. append(linha + "\n");
+				buffWrite.append(linha + "\n");
 				
 				linha = "42|"
 					  + "1|"
 					  + rs.getString("CODIGOINEP")+"|" //codigo do curso
-					  + rs.getString("CODINEP")+"|" //codigo do polo
+					  + getPolo(rs.getString("CODINEP"))+"|" //codigo do polo
 					  + "|" //matricula do aluno
 					  + "|" //turno
 					  + getSituacaoAluno(rs.getString("STALUNO"))+"|" //situacao do aluno
@@ -104,7 +114,7 @@ public class ArquivoAlunos {
 					  + "|"
 					  + "|"
 					  + "|"
-					  + "|" //apoio social
+					  + "0|" //apoio social
 					  + "|"
 					  + "|"
 					  + "|"
@@ -120,14 +130,37 @@ public class ArquivoAlunos {
 					  + "|"
 					  + "|"
 					  + "|"
-					  + getCargaHoraria(rs.getString("CDALUNO"))+"|";
+					  + rs.getString("CH")+"|"
+					  + getCargaHoraria(rs.getString("CDALUNO"));
+				
+				buffWrite.append(linha + "\n");
 			}
 			
 			buffWrite.close();
 			
+			System.out.println("KBÔ");
+			
 		}catch(Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	private String getPolo(String polo) {
+		String p = "";
+		
+		if (polo != null) {
+			p = polo;
+		}
+		return p;
+	}
+
+	private String getPassaporte(String passaporte) {
+		String pass = "";
+		if(passaporte != null) {
+			pass = passaporte;
+		}
+		
+		return pass;
 	}
 
 	private String getCargaHoraria(String cdaluno) {
@@ -135,13 +168,17 @@ public class ArquivoAlunos {
 		
 		try {
 			
-			ResultSet rs = statement.executeQuery(" select sum() as CH from matricula, disciplina"
+			ResultSet rs1 = connection.createStatement().executeQuery(" select sum(cast(disciplina.cargahoraria as integer)) as CH from matricula, disciplina"
 												 +" where matricula.cddisciplina = disciplina.cddisciplina"
 												 +" and matricula.stmatricula in ('02','06','08')"
 												 +" and matricula.cdaluno = '"+cdaluno+"'");
 			
-			if(rs.next()) {
-				ch = rs.getString("CH");
+			if(rs1.next()) {
+				if(rs1.getString("CH") == null) {
+				  ch = "0";
+				}else {
+					ch = rs1.getString("CH");
+				}
 			}
 			
 		}catch(Exception e) {
@@ -156,11 +193,11 @@ public class ArquivoAlunos {
 		
 		if(staluno.equals("09")) {
 			try {
-				ResultSet rs = statement.executeQuery(" select * from conclusaocurso where cdaluno = '"+cdaluno+"'");
+				ResultSet rs2 = connection.createStatement().executeQuery(" select * from conclusaocurso where cdaluno = '"+cdaluno+"'");
 				
-				if(rs.next()) {
-					if(!rs.getString("ANOPERIODOCONCLUSAO").isEmpty()) {
-						conclusao = rs.getString("ANOPERIODOCONCLUSAO").substring(5);
+				if(rs2.next()) {
+					if(!rs2.getString("ANOPERIODOCONCLUSAO").isEmpty()) {
+						conclusao = rs2.getString("ANOPERIODOCONCLUSAO").substring(5);
 					}
 				}
 				
@@ -322,10 +359,13 @@ public class ArquivoAlunos {
 
 	         Class.forName("org.firebirdsql.jdbc.FBDriver");
 	         connection = DriverManager.getConnection(
-	               "jdbc:firebirdsql:172.20.6.96/3050:c:\\arquivos de programas\\grc\\graduacao\\sgbd\\graduacao.gdb",
+	               "jdbc:firebirdsql:localhost/3050:/home/gustavo/Sistemas/graduacao.gdb",
 	               "sysdba",
-	               "sintuperj");
+	               "masterkey");
+	         connection.setAutoCommit(false);
+	         
 	         statement = connection.createStatement();
+	         
 	         System.out.println("OK");
 	      } catch (Exception e) {
 	         System.out.println("N�o foi poss�vel conectar ao banco: " + e.getMessage());
